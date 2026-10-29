@@ -48,20 +48,25 @@ def aggregate_account_risk(
     }
 
     seen_rule_types = set()
-    for sig in rule_signals:
-        r_type = sig.rule_or_model
-        if r_type not in seen_rule_types:
-            seen_rule_types.add(r_type)
-            w = rule_weights.get(r_type, 0.15)
-            contributing_signals.append(AlertSignal(
-                rule_or_model=r_type,
-                normalized_score=sig.normalized_score,
-                contribution_weight=w,
-                reason=sig.reason,
-                evidence_references=sig.evidence_references
-            ))
-            total_weighted_sum += sig.normalized_score * w
-            total_valid_weights += w
+    if rule_signals:
+        for sig in rule_signals:
+            r_type = sig.rule_or_model
+            if r_type not in seen_rule_types:
+                seen_rule_types.add(r_type)
+                w = rule_weights.get(r_type, 0.15)
+                contributing_signals.append(AlertSignal(
+                    rule_or_model=r_type,
+                    normalized_score=sig.normalized_score,
+                    contribution_weight=w,
+                    reason=sig.reason,
+                    evidence_references=sig.evidence_references
+                ))
+                total_weighted_sum += sig.normalized_score * w
+                total_valid_weights += w
+    else:
+        # Heuristic rules evaluated cleanly with zero anomaly triggers: baseline weight preserves balanced calibration
+        rule_baseline_w = config.weight_rule_passthrough + config.weight_rule_smurfing
+        total_valid_weights += rule_baseline_w
 
     # 2. Process Isolation Forest Anomaly Signal
     if iforest_output.status == "READY" and iforest_output.anomaly_score is not None:
@@ -109,7 +114,7 @@ def aggregate_account_risk(
         severity = "LOW"
 
     # Synthesize Plain-English Primary Reason
-    if not contributing_signals:
+    if not contributing_signals or final_score < config.risk_threshold_medium:
         primary_reason = "Normal activity: no suspicious flow patterns or structural anomalies detected."
     else:
         # Pick signal with highest weighted score

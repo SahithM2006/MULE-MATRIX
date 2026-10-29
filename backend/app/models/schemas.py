@@ -165,6 +165,8 @@ class DiscoveredPath(BaseModel):
     end_timestamp: str
     duration_seconds: float
     accounts_in_path: List[str]
+    stop_reason: Optional[str] = "MAX_HOPS_REACHED"
+    direction: Optional[str] = "forward"
 
 class BFSResponse(BaseModel):
     seed_account_id: str
@@ -172,6 +174,7 @@ class BFSResponse(BaseModel):
     paths: List[DiscoveredPath]
     visited_nodes: List[str]
     execution_time_ms: float
+    stop_reasons_summary: Optional[Dict[str, int]] = None
 
 class LineageVerifyResponse(BaseModel):
     valid: bool

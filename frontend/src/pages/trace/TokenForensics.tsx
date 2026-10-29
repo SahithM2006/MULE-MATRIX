@@ -9,11 +9,13 @@ import {
   Fingerprint,
   Link2,
   FileCheck2,
-  Share2
+  Share2,
+  Info
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { LineageEvent, LineageVerifyResponse, TamperTestResponse } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const TokenForensics: React.FC = () => {
   const {
@@ -21,21 +23,22 @@ export const TokenForensics: React.FC = () => {
     selectedAccountId,
     investigateAccount,
     setMilestoneCompleted,
-    goToGuidedStage,
-    navigateToModule,
-    isTourActive,
-    currentTourStep,
-    setTourStepStatus
+    navigateToModule
   } = useInvestigation();
-  const [tokenId, setTokenId] = useState(selectedTokenId || 'TOKR_HERO_500K_GENESIS');
+  const [tokenId, setTokenId] = useState(selectedTokenId || '');
   const [events, setEvents] = useState<LineageEvent[]>([]);
   const [verifyResult, setVerifyResult] = useState<LineageVerifyResponse | null>(null);
   const [tamperResult, setTamperResult] = useState<TamperTestResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [tampering, setTampering] = useState(false);
 
   const loadLineage = async () => {
+    if (!tokenId) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setVerifyResult(null);
     setTamperResult(null);
@@ -43,15 +46,15 @@ export const TokenForensics: React.FC = () => {
       const data = await api.getLineage(tokenId);
       setEvents(data);
     } catch (err: any) {
-      alert(`Lineage load error: ${err.message}`);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (selectedTokenId && selectedTokenId !== tokenId) {
-      setTokenId(selectedTokenId);
+    if (selectedTokenId !== undefined) {
+      setTokenId(selectedTokenId || '');
     }
   }, [selectedTokenId]);
 
@@ -60,10 +63,8 @@ export const TokenForensics: React.FC = () => {
   }, [tokenId]);
 
   const handleVerifyChain = async () => {
+    if (!tokenId) return;
     setVerifying(true);
-    if (isTourActive && currentTourStep === 5) {
-      setTourStepStatus('action_in_progress');
-    }
     try {
       const res = await api.verifyLineage(tokenId);
       setVerifyResult(res);
@@ -71,18 +72,8 @@ export const TokenForensics: React.FC = () => {
         setMilestoneCompleted('lineageVerified', {
           lineageValid: true
         });
-        if (isTourActive && currentTourStep === 5) {
-          setTourStepStatus('action_completed');
-        }
-      } else {
-        if (isTourActive && currentTourStep === 5) {
-          setTourStepStatus('error', res.message || 'Chain compromise detected');
-        }
       }
     } catch (err: any) {
-      if (isTourActive && currentTourStep === 5) {
-        setTourStepStatus('error', err.message);
-      }
       alert(`Verification error: ${err.message}`);
     } finally {
       setVerifying(false);
@@ -125,16 +116,61 @@ export const TokenForensics: React.FC = () => {
         </div>
 
         <div className="stream-controls">
-          <button className="btn-primary" onClick={handleVerifyChain} disabled={verifying} data-tour="verify-chain-btn">
+          <button className="btn-primary" onClick={handleVerifyChain} disabled={verifying || !tokenId}>
             <ShieldCheck size={13} className={verifying ? 'spinning' : ''} />
             <span>{verifying ? 'Recalculating Hashes...' : 'Verify Cryptographic Chain'}</span>
           </button>
-          <button className="btn-secondary" onClick={handleRunTamperTest} disabled={tampering}>
+          <button className="btn-secondary" onClick={handleRunTamperTest} disabled={tampering || !tokenId}>
             <AlertOctagon size={13} color="var(--alert-critical)" className={tampering ? 'spinning' : ''} />
             <span>{tampering ? 'Simulating Tamper...' : 'Run Tamper Test'}</span>
           </button>
         </div>
       </div>
+
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
+      {!tokenId && (
+        <div
+          className="hud-panel"
+          style={{
+            padding: '20px 24px',
+            borderLeft: '4px solid var(--steel-blue)',
+            background: 'rgba(21, 27, 39, 0.95)',
+            marginBottom: '16px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <Info size={18} color="var(--steel-blue)" />
+            <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)' }}>
+              No Token Lineage Reference for Selected Entity
+            </h3>
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '780px' }}>
+            The active account {selectedAccountId ? `(${selectedAccountId})` : ''} does not involve simulated e-Rupee tokenized transfers. Token lineage and parent-child split records are maintained specifically for tokenized e-INR flows (such as the predefined Hero scenario). For standard account-to-account transfers, forensic evidence is evaluated via 11-D graph topology and algorithmic detection models.
+          </p>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                if (selectedAccountId) {
+                  investigateAccount(selectedAccountId);
+                } else {
+                  navigateToModule('DETECT', 'detection-lab');
+                }
+              }}
+            >
+              <span>Review Detection Evidence in Detection Lab →</span>
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => setTokenId('TOKR_HERO_500K_GENESIS')}
+            >
+              <span>Inspect Predefined Hero Token Demo</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Target Token Genesis & Cryptographic Seal Banner */}
       <div className="hud-panel active-sweep-border" style={{ padding: '16px 20px' }}>
@@ -202,7 +238,6 @@ export const TokenForensics: React.FC = () => {
       {verifyResult && (
         <div
           className="hud-panel stagger-in"
-          data-tour="verify-result"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -232,7 +267,6 @@ export const TokenForensics: React.FC = () => {
               style={{ flexShrink: 0 }}
               onClick={() => {
                 investigateAccount(selectedAccountId || 'ACC_HERO_MULE_L2_CONVERGE');
-                goToGuidedStage(4);
               }}
             >
               <span>Inspect Account Dossier</span>
@@ -275,7 +309,7 @@ export const TokenForensics: React.FC = () => {
       )}
 
       {/* Directed Transfer Sequence Visualizer */}
-      <div className="hud-panel" data-tour="token-history" style={{ padding: '16px 20px' }}>
+      <div className="hud-panel" style={{ padding: '16px 20px' }}>
         <div className="card-header">
           <span className="card-title">
             <Share2 size={13} color="var(--accent-gold)" />

@@ -1,13 +1,10 @@
 import React from 'react';
+import './App.css';
 import { InvestigationProvider, useInvestigation } from './context/InvestigationContext';
 import { Header } from './components/Header';
-import { ThreatLifecycleDeck } from './components/ThreatLifecycleDeck';
-import { InvestigationProgressPanel } from './components/InvestigationProgressPanel';
-import { InvestigationWalkthroughModal } from './components/InvestigationWalkthroughModal';
+import { Sidebar } from './components/Sidebar';
+import { InvestigationContextBar } from './components/InvestigationContextBar';
 import { Footer } from './components/Footer';
-import { WelcomeModal } from './components/tour/WelcomeModal';
-import { GuidedTourOverlay } from './components/tour/GuidedTourOverlay';
-import { TourCompletedModal } from './components/tour/TourCompletedModal';
 import { LivingCyberBackground } from './components/background/LivingCyberBackground';
 
 // Pages
@@ -31,25 +28,25 @@ const MainContent: React.FC = () => {
 
   const renderModule = () => {
     switch (activeModule) {
-      // 1. OBSERVE
+      // 01. OBSERVE
       case 'sentinel':
         return <SentinelCommand />;
       case 'threat-stream':
         return <ThreatStream />;
 
-      // 2. TRACE
+      // 02. TRACE
       case 'attack-graph':
         return <AttackGraph />;
       case 'token-forensics':
         return <TokenForensics />;
 
-      // 3. DETECT
+      // 03. DETECT
       case 'detection-lab':
         return <DetectionLab />;
       case 'model-observatory':
         return <ModelObservatory />;
 
-      // 4. RESPOND
+      // 04. RESPOND
       case 'incident-response':
         return <IncidentResponse />;
       case 'evidence-vault':
@@ -57,7 +54,7 @@ const MainContent: React.FC = () => {
       case 'audit-ledger':
         return <AuditLedger />;
 
-      // 5. TOOLS / UTILITIES
+      // UTILITIES & LAB
       case 'simulator':
         return <ScenarioSimulator />;
       case 'replay':
@@ -86,56 +83,18 @@ const MainContent: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const {
-    isWelcomeModalOpen,
-    isTourActive,
-    currentTourStep,
-    tourStepStatus,
-    tourError,
-    isTourCompletedModalOpen,
-    startGuidedTour,
-    skipTour,
-    exploreOnMyOwn,
-    replayGuidedTour,
-    nextTourStep,
-    prevTourStep,
-    exitTour,
-    closeTourCompletedModal
-  } = useInvestigation();
-
   return (
-    <div className="app-layout">
+    <div className="app-shell-root">
       <LivingCyberBackground />
       <Header />
-      <ThreatLifecycleDeck />
-      <InvestigationProgressPanel />
-      <MainContent />
-      <Footer />
-      <InvestigationWalkthroughModal />
-
-      {/* Interactive Guided Product Tour Components */}
-      <WelcomeModal
-        isOpen={isWelcomeModalOpen}
-        onStartTour={startGuidedTour}
-        onSkipTour={skipTour}
-        onExploreOnMyOwn={exploreOnMyOwn}
-      />
-      <GuidedTourOverlay
-        currentStep={currentTourStep}
-        isTourActive={isTourActive}
-        stepStatus={tourStepStatus}
-        tourError={tourError}
-        onNext={nextTourStep}
-        onBack={prevTourStep}
-        onSkipTour={skipTour}
-        onExitTour={exitTour}
-      />
-      <TourCompletedModal
-        isOpen={isTourCompletedModalOpen}
-        onFinishTour={closeTourCompletedModal}
-        onReplayTour={replayGuidedTour}
-        onExploreApplication={closeTourCompletedModal}
-      />
+      <div className="workstation-body-container">
+        <Sidebar />
+        <div className="workstation-workspace-area">
+          <InvestigationContextBar />
+          <MainContent />
+          <Footer />
+        </div>
+      </div>
     </div>
   );
 };

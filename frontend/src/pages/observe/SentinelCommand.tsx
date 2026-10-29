@@ -8,14 +8,12 @@ import {
   Activity,
   Layers,
   Lock,
-  Compass,
   Zap,
   TrendingUp,
   Cpu,
   ChevronDown,
   ChevronUp,
   FileText,
-  Play,
   Target,
   ExternalLink,
   Sliders,
@@ -25,6 +23,7 @@ import {
 import { api } from '../../api/client';
 import { SentinelSummary, GraphDataResponse, TransactionEnriched, GraphNode } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 // Animated Number Counter Component
 const AnimatedCounter: React.FC<{ value: number; prefix?: string; suffix?: string; decimals?: number }> = ({
@@ -73,12 +72,7 @@ export const SentinelCommand: React.FC = () => {
     setSelectedAccountId,
     setSelectedTxId,
     setSelectedAlertId,
-    setMilestoneCompleted,
-    startGuidedTour,
-    isTourActive,
-    currentTourStep,
-    nextTourStep,
-    setTourStepStatus
+    setMilestoneCompleted
   } = useInvestigation();
 
   const graphContainerRef = useRef<HTMLDivElement>(null);
@@ -246,14 +240,6 @@ export const SentinelCommand: React.FC = () => {
       alertReason: alt.primary_reason,
       riskScore: alt.risk_score
     });
-
-    // Advance tour step 1 if active
-    if (isTourActive && currentTourStep === 1) {
-      setTourStepStatus('action_completed');
-      setTimeout(() => {
-        nextTourStep();
-      }, 500);
-    }
   };
 
   return (
@@ -275,7 +261,11 @@ export const SentinelCommand: React.FC = () => {
             Sentinel Command & Threat Surveillance
           </h1>
 
-          <p className="stream-description" style={{ fontSize: '14px', lineHeight: 1.6, maxWidth: '820px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--accent-gold)', margin: '4px 0 6px 0', fontWeight: 600, letterSpacing: '0.02em' }}>
+            Investigate suspicious financial activity by tracing transaction flows, examining detection evidence, and preserving case records.
+          </p>
+
+          <p className="stream-description" style={{ fontSize: '13px', lineHeight: 1.5, maxWidth: '820px', color: 'var(--text-secondary)' }}>
             Central intelligence focal point synthesizing multi-hop mule layering, high-velocity fund pooling, and simulated e-Rupee token transfers into real-time actionable alerts.
           </p>
         </div>
@@ -284,7 +274,7 @@ export const SentinelCommand: React.FC = () => {
         <div className="stream-controls" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
             className="btn-primary"
-            onClick={startGuidedTour}
+            onClick={() => navigateToModule('OBSERVE', 'threat-stream')}
             style={{
               padding: '9px 18px',
               fontSize: '13px',
@@ -293,10 +283,10 @@ export const SentinelCommand: React.FC = () => {
               gap: '8px',
               borderRadius: 'var(--radius-sm)'
             }}
-            title="Start step-by-step guided product tour"
+            title="Investigate existing suspicious activity from real alerts or transactions in the dataset"
           >
-            <Compass size={15} />
-            <span>Start Guided Tour</span>
+            <ShieldAlert size={15} />
+            <span>Investigate Existing Activity</span>
             <ArrowRight size={13} />
           </button>
 
@@ -304,7 +294,7 @@ export const SentinelCommand: React.FC = () => {
             className="btn-secondary"
             onClick={() => navigateToModule('TOOLS', 'simulator')}
             style={{ fontSize: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            title="Simulate synthetic financial mule scenarios"
+            title="Simulate synthetic financial mule scenarios (Optional test bed)"
           >
             <Sliders size={13} color="var(--accent-gold)" />
             <span>Scenario Simulator</span>
@@ -340,6 +330,9 @@ export const SentinelCommand: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
+
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
 
       {/* Progressive Disclosure: Technical Overview Panel */}
       {showTechOverview && (
@@ -532,13 +525,12 @@ export const SentinelCommand: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(0, 1.25fr)', gap: '18px' }}>
         {/* Left: Centerpiece Transaction Network Graph */}
         <div
-          data-tour="sentinel-graph"
           className="hud-panel hud-corner-brackets"
           style={{ display: 'flex', flexDirection: 'column', height: '560px', padding: '16px 20px' }}
         >
           <div className="card-header" style={{ marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
             <span className="card-title" style={{ fontSize: '13.5px', fontWeight: 700 }}>
-              <Compass size={15} color="var(--accent-gold)" />
+              <Layers size={15} color="var(--accent-gold)" />
               ACTIVE TRANSACTION TOPOLOGY (HERO SUBGRAPH)
             </span>
 
@@ -725,7 +717,6 @@ export const SentinelCommand: React.FC = () => {
               return (
                 <div
                   key={alt.alert_id}
-                  data-tour={isFirst ? 'sentinel-first-alert' : undefined}
                   onClick={() => setExpandedAlertId(isExpanded ? null : alt.alert_id)}
                   style={{
                     background: isExpanded ? 'rgba(28, 36, 52, 0.96)' : 'rgba(21, 27, 39, 0.95)',
@@ -807,14 +798,14 @@ export const SentinelCommand: React.FC = () => {
                         </button>
 
                         <button
-                          data-tour={isFirst ? 'sentinel-investigate-btn' : undefined}
                           className="btn-action btn-gold"
                           style={{ fontSize: '11px', padding: '4px 12px', fontWeight: 700 }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSelectAlert(alt);
+                            investigateAccount(alt.account_id);
                           }}
-                          title="Investigate this Alert (Step 1 Tour Action)"
+                          title="Investigate this Alert"
                         >
                           <span>Investigate Alert →</span>
                         </button>
@@ -835,7 +826,7 @@ export const SentinelCommand: React.FC = () => {
       </div>
 
       {/* Lower Telemetry Region: Chronological Transaction Stream Table */}
-      <div data-tour="sentinel-transits" className="hud-panel" style={{ padding: '20px 24px' }}>
+      <div className="hud-panel" style={{ padding: '20px 24px' }}>
         <div className="card-header" style={{ marginBottom: '14px' }}>
           <span className="card-title" style={{ fontSize: '13.5px', fontWeight: 700 }}>
             <TrendingUp size={15} color="var(--steel-blue)" />

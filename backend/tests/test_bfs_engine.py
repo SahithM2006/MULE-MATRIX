@@ -62,3 +62,19 @@ def test_bfs_cycle_suppression():
     # Check that no path contains duplicate accounts
     for p in res.paths:
         assert len(p.accounts_in_path) == len(set(p.accounts_in_path))
+
+def test_bfs_combined_and_stop_reasons():
+    """Verify that BFS supports combined direction and sets stop reasons."""
+    _, hero_txs, _ = generate_hero_data()
+    req = BFSRequest(
+        seed_account_id="ACC_HERO_MULE_L2_CONVERGE",
+        max_hops=4,
+        time_window_seconds=3600,
+        direction="combined"
+    )
+    res = trace_time_constrained_bfs(req, hero_txs)
+    assert res.total_paths > 0
+    assert res.stop_reasons_summary is not None
+    assert "ACC_HERO_CASHOUT_DEST_999" in res.visited_nodes
+    assert any(p.stop_reason in ("OFF_RAMP_REACHED", "MAX_HOPS_REACHED", "NO_ELIGIBLE_INCOMING_OR_OUTGOING_TRANSACTIONS") for p in res.paths)
+

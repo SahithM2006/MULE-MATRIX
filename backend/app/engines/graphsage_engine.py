@@ -26,6 +26,7 @@ from backend.app.core.logging import logger
 
 MODEL_PATH = Path(config.artifacts_dir) / "graphsage_v1.pt"
 METADATA_PATH = Path(config.artifacts_dir) / "graphsage_metadata.json"
+PREDICTIONS_PATH = Path(config.artifacts_dir) / "graphsage_predictions.json"
 
 class GraphSAGELayer(nn.Module):
     """Inductive GraphSAGE layer with mean neighbor aggregation."""
@@ -237,7 +238,58 @@ class GraphSAGEEngine:
         }
         with open(METADATA_PATH, "w", encoding="utf-8") as f:
             json.dump(self.metadata, f, indent=2)
+        try:
+            with open(PREDICTIONS_PATH, "w", encoding="utf-8") as f:
+                json.dump({
+                    "predictions": self.cached_predictions,
+                    "embeddings": self.cached_embeddings
+                }, f)
+        except Exception as e:
+            logger.warning(f"Could not persist predictions cache: {e}")
         logger.info(f"GraphSAGE model persisted to {MODEL_PATH}")
+
+    def infer_graph(
+        self,
+        accounts: List[Dict[str, Any]],
+        transactions: List[Dict[str, Any]],
+        feature_df: pd.DataFrame
+    ) -> None:
+        """Inductive inference: runs forward pass of trained GraphSAGE model on given graph features and topology."""
+        if self.model is None or feature_df.empty:
+            return
+
+        account_ids = list(feature_df.index)
+        N = len(account_ids)
+        if N == 0:
+            return
+
+        x = feature_df.values.astype(np.float32)
+        mean_feat = np.array(self.metadata.get("mean_features", np.mean(x, axis=0)), dtype=np.float32)
+        std_feat = np.array(self.metadata.get("std_features", np.std(x, axis=0) + 1e-4), dtype=np.float32)
+        std_feat = np.maximum(std_feat, 1e-4)
+        x_norm = (x - mean_feat) / std_feat
+
+        x_tensor = torch.tensor(x_norm, dtype=torch.float32)
+        adj_norm = self.build_normalized_adj(account_ids, transactions)
+
+        self.model.eval()
+        with torch.no_grad():
+            logits, embs = self.model(x_tensor, adj_norm)
+            probs = torch.sigmoid(logits).cpu().numpy()
+            embs_np = embs.cpu().numpy()
+
+        for i, aid in enumerate(account_ids):
+            self.cached_predictions[aid] = float(probs[i])
+            self.cached_embeddings[aid] = [round(float(v), 4) for v in embs_np[i][:4]]
+
+        try:
+            with open(PREDICTIONS_PATH, "w", encoding="utf-8") as f:
+                json.dump({
+                    "predictions": self.cached_predictions,
+                    "embeddings": self.cached_embeddings
+                }, f)
+        except Exception:
+            pass
 
     def load_model_if_available(self) -> bool:
         """Loads saved weights and metadata if present."""
@@ -249,7 +301,17 @@ class GraphSAGEEngine:
                 self.model = GraphSAGEClassifier(in_features=11, hidden_dim=64, out_dim=32)
                 self.model.load_state_dict(torch.load(str(MODEL_PATH), weights_only=True))
                 self.model.eval()
-                logger.info(f"Loaded existing GraphSAGE model (Version: {self.metadata.get('model_version')})")
+
+                if PREDICTIONS_PATH.exists():
+                    try:
+                        with open(PREDICTIONS_PATH, "r", encoding="utf-8") as pf:
+                            data = json.load(pf)
+                            self.cached_predictions = data.get("predictions", {})
+                            self.cached_embeddings = data.get("embeddings", {})
+                    except Exception as pe:
+                        logger.warning(f"Could not load predictions cache: {pe}")
+
+                logger.info(f"Loaded existing GraphSAGE model (Version: {self.metadata.get('model_version')}, Cached nodes: {len(self.cached_predictions)})")
                 return True
             except Exception as e:
                 logger.warning(f"Could not load GraphSAGE model artifact: {e}")
@@ -259,7 +321,7 @@ class GraphSAGEEngine:
 
     def predict_account(self, account_id: str) -> GraphSAGEOutput:
         """Returns inductive mule classification score or explicit NOT_TRAINED status."""
-        if self.model is None or not self.cached_predictions:
+        if self.model is None:
             return GraphSAGEOutput(
                 status="NOT_TRAINED",
                 mule_probability=None,
@@ -271,6 +333,24 @@ class GraphSAGEEngine:
 
         prob = self.cached_predictions.get(account_id)
         emb = self.cached_embeddings.get(account_id, [])
+
+        if prob is None:
+            # On-demand inductive inference for account if graph data can be retrieved
+            try:
+                from backend.app.db.database import get_connection
+                from backend.app.engines.feature_extractor import extract_graph_features
+                conn = get_connection()
+                try:
+                    accs = [dict(r) for r in conn.execute("SELECT * FROM accounts;").fetchall()]
+                    txs = [dict(r) for r in conn.execute("SELECT * FROM transactions;").fetchall()]
+                finally:
+                    conn.close()
+                f_df, _ = extract_graph_features(accs, txs)
+                self.infer_graph(accs, txs, f_df)
+                prob = self.cached_predictions.get(account_id)
+                emb = self.cached_embeddings.get(account_id, [])
+            except Exception as ex:
+                logger.warning(f"On-demand GraphSAGE inference failed for {account_id}: {ex}")
 
         if prob is None:
             return GraphSAGEOutput(

@@ -42,9 +42,11 @@ def run_full_detection_pipeline(db_path: str = None) -> Dict[str, Any]:
         # 2. Fit Isolation Forest
         iforest_engine.fit(feature_df)
 
-        # 3. Train or load GraphSAGE
+        # 3. Train or infer GraphSAGE
         if graphsage_engine.model is None:
             graphsage_engine.train_pipeline(accounts, transactions, feature_df)
+        else:
+            graphsage_engine.infer_graph(accounts, transactions, feature_df)
 
         # 4. Louvain Community Detection
         _, undirected_g = extract_graph_features.__globals__["build_networkx_graph"](transactions, accounts)

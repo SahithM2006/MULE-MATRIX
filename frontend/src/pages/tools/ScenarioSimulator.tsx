@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 interface ScenarioArchetype {
   id: string;
@@ -30,10 +31,7 @@ export const ScenarioSimulator: React.FC = () => {
     navigateToModule,
     investigateAccount,
     setSelectedAccountId,
-    setTourStepStatus,
-    recordTourGeneratedData,
-    isTourActive,
-    currentTourStep
+    setInvestigationTarget
   } = useInvestigation();
   const [selectedScenario, setSelectedScenario] = useState<string>('smurfing');
   const [seed, setSeed] = useState<number>(101);
@@ -105,30 +103,25 @@ export const ScenarioSimulator: React.FC = () => {
     try {
       setSimulating(true);
       setError(null);
-      if (isTourActive && currentTourStep === 2) {
-        setTourStepStatus('action_in_progress');
-      }
       const res = await api.simulateScenario(selectedScenario, seed);
       setSimulationResult(res);
 
-      if (res.accounts_generated && res.accounts_generated.length > 0) {
-        const topAccount = res.accounts_generated[0];
-        setSelectedAccountId(topAccount);
-        recordTourGeneratedData({
-          accountId: topAccount,
-          scenarioType: res.scenario_type,
-          alertId: res.alerts_triggered?.[0]?.alert_id
+      if (res.primary_account_id) {
+        setInvestigationTarget({
+          accountId: res.primary_account_id,
+          txId: res.primary_transaction_id || null,
+          tokenId: res.token_id || null,
+          scenarioId: res.scenario_id || selectedScenario
         });
-      }
-
-      if (isTourActive && currentTourStep === 2) {
-        setTourStepStatus('action_completed');
+      } else if (res.accounts_generated && res.accounts_generated.length > 0) {
+        const topAccount = res.accounts_generated[0];
+        setInvestigationTarget({
+          accountId: topAccount,
+          scenarioId: res.scenario_id || selectedScenario
+        });
       }
     } catch (err: any) {
       setError(err.message || 'Simulation execution failed.');
-      if (isTourActive && currentTourStep === 2) {
-        setTourStepStatus('error', err.message || 'Simulation execution failed.');
-      }
     } finally {
       setSimulating(false);
     }
@@ -183,6 +176,9 @@ export const ScenarioSimulator: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {pipelineResult && (
         <div
           style={{
@@ -226,7 +222,6 @@ export const ScenarioSimulator: React.FC = () => {
               SCENARIO ARCHETYPE
             </label>
             <select
-              data-tour="simulator-archetypes"
               value={selectedScenario}
               onChange={(e) => setSelectedScenario(e.target.value)}
               className="filter-select"
@@ -254,7 +249,6 @@ export const ScenarioSimulator: React.FC = () => {
           </div>
 
           <button
-            data-tour="simulate-btn"
             className="btn-primary"
             onClick={handleSimulate}
             disabled={simulating}
@@ -360,7 +354,7 @@ export const ScenarioSimulator: React.FC = () => {
 
       {/* Simulation Result Output */}
       {simulationResult && (
-        <div data-tour="simulation-receipt" className="card stagger-in">
+        <div className="card stagger-in">
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <CheckCircle2 size={15} color="#10B981" />
@@ -474,18 +468,33 @@ export const ScenarioSimulator: React.FC = () => {
             </div>
           )}
 
-          <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+          <div style={{ marginTop: '14px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
-              className="btn-primary"
+              className="btn-primary btn-gold"
               onClick={() => {
-                if (simulationResult.accounts_generated?.[0]) {
-                  setSelectedAccountId(simulationResult.accounts_generated[0]);
+                const targetAcc = simulationResult.primary_account_id || simulationResult.accounts_generated?.[0];
+                if (targetAcc) {
+                  setSelectedAccountId(targetAcc);
+                }
+                navigateToModule('OBSERVE', 'sentinel');
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              <Zap size={13} />
+              <span>Begin Investigation in Sentinel Command →</span>
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                const targetAcc = simulationResult.primary_account_id || simulationResult.accounts_generated?.[0];
+                if (targetAcc) {
+                  setSelectedAccountId(targetAcc);
                 }
                 navigateToModule('TRACE', 'attack-graph');
               }}
             >
               <Network size={13} />
-              <span>Inspect in Attack Graph</span>
+              <span>Trace in Attack Graph</span>
             </button>
             <button
               className="btn-secondary"

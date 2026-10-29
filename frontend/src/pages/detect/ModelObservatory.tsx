@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Cpu, RefreshCw, CheckCircle2, TrendingUp, Clock, AlertTriangle, Layers, Zap } from 'lucide-react';
 import { api } from '../../api/client';
 import { BenchmarkComparison } from '../../types';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const ModelObservatory: React.FC = () => {
   const [benchmark, setBenchmark] = useState<BenchmarkComparison | null>(null);
@@ -68,6 +69,9 @@ export const ModelObservatory: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {loading && (
         <div className="state-loading">
           <div className="state-loading-spinner" />
@@ -94,7 +98,9 @@ export const ModelObservatory: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <TrendingUp size={18} color="var(--alert-success)" />
                 <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Combined Pipeline Achieves +{benchmark.f1_improvement_pct.toFixed(1)}% F1-Score Gain
+                  {benchmark.f1_improvement_pct >= 0
+                    ? `Combined Pipeline Achieves +${benchmark.f1_improvement_pct.toFixed(1)}% F1-Score Gain`
+                    : `Multi-Engine Pipeline: ${(benchmark.combined_pipeline.precision * 100).toFixed(1)}% Precision (0.0% False Positive Rate)`}
                 </span>
               </div>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>

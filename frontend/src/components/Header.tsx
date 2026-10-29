@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Terminal, UserCheck, Shield, Activity, Compass, Clock, Target } from 'lucide-react';
+import { Search, UserCheck, Clock, Target } from 'lucide-react';
 import { useInvestigation } from '../context/InvestigationContext';
 import { api } from '../api/client';
 import { SystemHealthResponse } from '../types';
 
 export const Header: React.FC = () => {
-  const { investigateAccount, replayGuidedTour, selectedAccountId, navigateToModule } = useInvestigation();
+  const { investigateAccount, selectedAccountId, navigateToModule } = useInvestigation();
   const [searchInput, setSearchInput] = useState('');
   const [health, setHealth] = useState<SystemHealthResponse | null>(null);
   const [utcTime, setUtcTime] = useState<string>('');
@@ -182,25 +182,6 @@ export const Header: React.FC = () => {
             {utcTime || 'UTC'}
           </span>
         </div>
-
-        {/* Replay Guided Tour CTA */}
-        <button
-          className="btn-action btn-gold tour-header-replay-btn"
-          onClick={replayGuidedTour}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '11px',
-            padding: '4px 10px',
-            height: '28px',
-            border: '1px solid var(--accent-gold)'
-          }}
-          title="Replay the 10-step interactive guided walkthrough"
-        >
-          <Compass size={12} color="var(--accent-gold)" />
-          <span>Replay Guided Tour</span>
-        </button>
 
         {/* Analyst Clearance Badge */}
         <div

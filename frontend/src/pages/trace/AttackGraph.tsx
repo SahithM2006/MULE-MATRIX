@@ -17,11 +17,15 @@ import {
   Compass,
   Zap,
   Filter,
-  Eye
+  Eye,
+  GitBranch,
+  ArrowUpRight,
+  ArrowDownLeft
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { GraphDataResponse, GraphNode, BFSResponse } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const AttackGraph: React.FC = () => {
   const {
@@ -34,10 +38,7 @@ export const AttackGraph: React.FC = () => {
     traceToken,
     navigateToModule,
     goToGuidedStage,
-    setMilestoneCompleted,
-    isTourActive,
-    currentTourStep,
-    setTourStepStatus
+    setMilestoneCompleted
   } = useInvestigation();
   const graphContainerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
@@ -51,6 +52,7 @@ export const AttackGraph: React.FC = () => {
   const [focusAcc, setFocusAcc] = useState(selectedAccountId || 'ACC_HERO_MULE_L2_CONVERGE');
   const [depth, setDepth] = useState(2);
   const [timeFilterHours, setTimeFilterHours] = useState<number>(0); // 0 = all history
+  const [bfsDirection, setBfsDirection] = useState<'combined' | 'forward' | 'backward'>('combined');
   const [bfsResults, setBfsResults] = useState<BFSResponse | null>(null);
   const [activePathIdx, setActivePathIdx] = useState<number | null>(null);
   const [isTracingBfs, setIsTracingBfs] = useState(false);
@@ -140,87 +142,79 @@ export const AttackGraph: React.FC = () => {
         border = isDimmed ? '#522525' : '#E05252';
       } else if (n.account_type === 'mule_suspect' || risk >= 50) {
         bg = isDimmed ? '#1C1812' : '#2C2315';
-        border = isDimmed ? '#5E4A28' : '#C6A45A';
+        border = isDimmed ? '#665123' : '#C6A45A';
       } else if (n.id.includes('VICTIM')) {
-        bg = isDimmed ? '#111822' : '#182438';
+        bg = isDimmed ? '#121922' : '#182438';
         border = isDimmed ? '#334863' : '#7596C8';
       }
 
       return {
         id: n.id,
         label: n.id.replace('ACC_HERO_', '').replace('ACC_', ''),
-        title: `${n.id}\nClassification: ${n.account_type || 'standard'}\nRisk Score: ${risk.toFixed(1)}/100\nTopological In/Out Degree: ${n.in_degree} in / ${n.out_degree} out\nCluster: #${n.community_id || 1}`,
+        title: `${n.id} (${n.account_type})\nRisk: ${risk.toFixed(1)}/100\nDegree: In ${n.in_degree} / Out ${n.out_degree}`,
         shape: 'box',
-        size: isSelected ? 26 : isOnPath ? 24 : isHero ? 20 : 16,
+        size: isSelected ? 26 : isHero ? 22 : 18,
         color: {
-          background: isSelected ? '#32260B' : bg,
-          border: isSelected ? '#C6A45A' : border,
+          background: bg,
+          border: isSelected ? '#FFFFFF' : border,
           highlight: { background: '#C6A45A', border: '#FFFFFF' }
         },
         font: {
-          color: isOnPath ? '#FFD700' : isSelected ? '#FFFFFF' : isDimmed ? 'rgba(155, 168, 186, 0.4)' : '#E8EDF5',
+          color: isDimmed ? '#64748B' : '#E8EDF5',
           face: 'JetBrains Mono, monospace',
-          size: isOnPath || isSelected ? 12 : 11,
-          bold: isOnPath || isHero || isSelected
+          size: 11,
+          bold: isHero || isSelected
         },
-        borderWidth: isSelected ? 3.5 : isOnPath ? 2.5 : isHero ? 2 : 1,
-        shadow: isSelected
-          ? { enabled: true, color: 'rgba(198, 164, 90, 0.75)', size: 14 }
-          : isOnPath
-          ? { enabled: true, color: 'rgba(255, 215, 0, 0.5)', size: 10 }
-          : false,
-        opacity: isDimmed ? 0.35 : 1
+        borderWidth: isSelected ? 3 : isHero ? 2.2 : 1.2,
+        shadow: (isHero || isSelected || isOnPath) ? { enabled: true, color: 'rgba(198, 164, 90, 0.5)', size: 10 } : false
       };
     });
 
     const now = new Date().getTime();
     const visEdges = graphData.edges
       .filter((e) => {
-        if (!timeFilterHours || timeFilterHours <= 0) return true;
+        if (timeFilterHours <= 0) return true;
         const txTime = new Date(e.timestamp).getTime();
         return (now - txTime) <= timeFilterHours * 3600 * 1000;
       })
       .map((e) => {
-        const isOnPath = pathTxSet.has(e.transaction_id);
-        const isDimmed = hasPathFilter && !isOnPath;
+        const isTxOnPath = pathTxSet.has(e.transaction_id);
+        const isDimmed = hasPathFilter && !isTxOnPath;
+
+        let edgeColor = 'rgba(117, 150, 200, 0.28)';
+        let edgeWidth = 1.2;
+
+        if (isTxOnPath) {
+          edgeColor = '#FFD700';
+          edgeWidth = 3;
+        } else if (e.highlighted) {
+          edgeColor = '#C6A45A';
+          edgeWidth = 2.2;
+        } else if (isDimmed) {
+          edgeColor = 'rgba(42, 52, 68, 0.15)';
+          edgeWidth = 0.8;
+        }
+
         return {
           id: e.id,
           from: e.from_node,
           to: e.to_node,
-          label: `₹${(e.amount / 1000).toFixed(0)}k`,
-          title: `TX: ${e.transaction_id}\nFrom: ${e.from_node}\nTo: ${e.to_node}\nAmount: ₹${e.amount.toLocaleString()}\nTime: ${e.timestamp}`,
-          arrows: { to: { enabled: true, scaleFactor: isOnPath ? 0.95 : 0.65 } },
-          color: {
-            color: isOnPath ? '#FFD700' : isDimmed ? 'rgba(117, 150, 200, 0.1)' : e.highlighted ? '#C6A45A' : 'rgba(117, 150, 200, 0.35)',
-            highlight: '#FFD700'
-          },
-          dashes: isOnPath ? [6, 3] : false,
-          width: isOnPath ? 3.5 : e.highlighted ? 2.2 : 1.1,
-          font: {
-            color: isOnPath ? '#FFD700' : isDimmed ? 'rgba(100, 116, 139, 0.3)' : '#9BA8BA',
-            size: isOnPath ? 11 : 9,
-            face: 'JetBrains Mono, monospace'
-          },
-          smooth: { enabled: true, type: 'curvedCW', roundness: 0.14 }
+          arrows: { to: { enabled: true, scaleFactor: isTxOnPath ? 1.0 : 0.75 } },
+          color: { color: edgeColor, highlight: '#C6A45A' },
+          width: edgeWidth,
+          smooth: { enabled: true, type: 'curvedCW', roundness: 0.12 },
+          font: { color: isTxOnPath ? '#FFD700' : 'transparent', size: 9, face: 'JetBrains Mono' },
+          label: isTxOnPath ? `₹${e.amount.toLocaleString()}` : undefined
         };
       });
 
-    const data: any = {
-      nodes: new DataSet(visNodes),
-      edges: new DataSet(visEdges)
-    };
-
+    const data: any = { nodes: new DataSet(visNodes), edges: new DataSet(visEdges) };
     const options = {
       physics: {
-        stabilization: { iterations: 140 },
-        barnesHut: { gravitationalConstant: -3200, springLength: 115, springConstant: 0.04 }
+        stabilization: { iterations: 120 },
+        barnesHut: { gravitationalConstant: -2800, springLength: 95, springConstant: 0.04 }
       },
-      interaction: {
-        hover: true,
-        tooltipDelay: 100,
-        zoomView: true,
-        dragView: true
-      }
+      interaction: { hover: true, zoomView: true, dragView: true }
     };
 
     const network = new Network(graphContainerRef.current, data, options);
@@ -242,19 +236,17 @@ export const AttackGraph: React.FC = () => {
     };
   }, [graphData, selectedNode?.id, activePathIdx, bfsResults, timeFilterHours, communityMode]);
 
-  const handleTraceBFS = async () => {
+  const handleTraceBFS = async (directionOverride?: 'combined' | 'forward' | 'backward') => {
     if (!selectedNode) return;
+    const dir = directionOverride || bfsDirection;
     setIsTracingBfs(true);
     setActivePathIdx(null);
-    if (isTourActive && currentTourStep === 4) {
-      setTourStepStatus('action_in_progress');
-    }
     try {
       const res = await api.traceBFS({
         seed_account_id: selectedNode.id,
         max_hops: 4,
         time_window_seconds: 7200,
-        direction: 'forward'
+        direction: dir
       });
       setBfsResults(res);
       if (res.paths.length > 0) {
@@ -268,17 +260,40 @@ export const AttackGraph: React.FC = () => {
           riskScore: selectedNode.aggregate_risk_score || undefined
         });
       }
-      if (isTourActive && currentTourStep === 4) {
-        setTourStepStatus('action_completed');
-      }
     } catch (err: any) {
-      if (isTourActive && currentTourStep === 4) {
-        setTourStepStatus('error', err.message || 'BFS trace failed.');
-      } else {
-        alert(`BFS trace error: ${err.message}`);
-      }
+      alert(`BFS trace error: ${err.message}`);
     } finally {
       setIsTracingBfs(false);
+    }
+  };
+
+  const renderStopReasonBadge = (reason?: string) => {
+    switch (reason) {
+      case 'OFF_RAMP_REACHED':
+        return (
+          <span className="badge badge-critical" style={{ fontSize: '9px', padding: '1px 5px' }}>
+            OFF-RAMP REACHED
+          </span>
+        );
+      case 'MAX_HOPS_REACHED':
+        return (
+          <span className="badge badge-high" style={{ fontSize: '9px', padding: '1px 5px' }}>
+            MAX HOPS (4)
+          </span>
+        );
+      case 'LOOKBACK_OR_LOOKAHEAD_WINDOW_EXCEEDED':
+        return (
+          <span className="badge" style={{ fontSize: '9px', padding: '1px 5px', background: 'rgba(117, 150, 200, 0.15)', color: 'var(--steel-blue)', border: '1px solid rgba(117, 150, 200, 0.3)' }}>
+            WINDOW EXCEEDED
+          </span>
+        );
+      case 'NO_ELIGIBLE_INCOMING_OR_OUTGOING_TRANSACTIONS':
+      default:
+        return (
+          <span className="badge" style={{ fontSize: '9px', padding: '1px 5px', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
+            TERMINAL NODE
+          </span>
+        );
     }
   };
 
@@ -349,14 +364,57 @@ export const AttackGraph: React.FC = () => {
 
           {/* Action Buttons with Cross-Screen Context */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Direction Selector Group */}
+            <div style={{ display: 'flex', background: 'var(--bg-obsidian)', borderRadius: 'var(--radius-sm)', padding: '2px', border: '1px solid var(--border-subtle)' }}>
+              <button
+                type="button"
+                className={`btn-action ${bfsDirection === 'combined' ? 'btn-gold' : ''}`}
+                onClick={() => {
+                  setBfsDirection('combined');
+                  handleTraceBFS('combined');
+                }}
+                style={{ fontSize: '11px', padding: '4px 8px' }}
+                title="Trace both origin funds and downstream cashout off-ramps"
+              >
+                <GitBranch size={11} style={{ marginRight: '4px' }} />
+                <span>Combined</span>
+              </button>
+              <button
+                type="button"
+                className={`btn-action ${bfsDirection === 'backward' ? 'btn-gold' : ''}`}
+                onClick={() => {
+                  setBfsDirection('backward');
+                  handleTraceBFS('backward');
+                }}
+                style={{ fontSize: '11px', padding: '4px 8px' }}
+                title="Trace backward to origin victim accounts"
+              >
+                <ArrowDownLeft size={11} style={{ marginRight: '4px' }} />
+                <span>Backward (Origins)</span>
+              </button>
+              <button
+                type="button"
+                className={`btn-action ${bfsDirection === 'forward' ? 'btn-gold' : ''}`}
+                onClick={() => {
+                  setBfsDirection('forward');
+                  handleTraceBFS('forward');
+                }}
+                style={{ fontSize: '11px', padding: '4px 8px' }}
+                title="Trace forward to off-ramp exit accounts"
+              >
+                <ArrowUpRight size={11} style={{ marginRight: '4px' }} />
+                <span>Forward (Exits)</span>
+              </button>
+            </div>
+
             <button
-              data-tour="trace-bfs-btn"
               className="btn-primary"
-              onClick={handleTraceBFS}
+              onClick={() => handleTraceBFS()}
               disabled={isTracingBfs || !selectedNode}
+              style={{ padding: '6px 14px' }}
             >
               <Zap size={13} />
-              <span>{isTracingBfs ? 'Tracing Flow...' : 'Trace Monotonic BFS'}</span>
+              <span>{isTracingBfs ? 'Tracing Flow...' : 'Run BFS Trace'}</span>
             </button>
 
             <button
@@ -364,41 +422,13 @@ export const AttackGraph: React.FC = () => {
               onClick={() => {
                 if (selectedNode) {
                   investigateAccount(selectedNode.id);
-                  goToGuidedStage(4);
                 }
               }}
               disabled={!selectedNode}
-              title="Inspect Dossier in Detection Lab"
+              title="Inspect 8-engine evidence dossier in Detection Lab"
             >
               <Cpu size={13} />
-              <span>Analyze Dossier</span>
-            </button>
-
-            <button
-              className="btn-action btn-gold"
-              onClick={() => {
-                const tok = selectedTokenId || 'TOKR_HERO_500K_GENESIS';
-                traceToken(tok);
-                goToGuidedStage(3);
-              }}
-              title="Verify Cryptographic Token Lineage"
-            >
-              <Lock size={13} />
-              <span>Verify Lineage →</span>
-            </button>
-
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                if (selectedNode) {
-                  setSelectedAccountId(selectedNode.id);
-                  goToGuidedStage(5);
-                }
-              }}
-              title="Create Incident Response Case"
-            >
-              <ShieldAlert size={13} />
-              <span>Respond & Case</span>
+              <span>Review in Lab →</span>
             </button>
           </div>
         </div>
@@ -411,11 +441,13 @@ export const AttackGraph: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {/* REGION B: SIGNATURE IMMERSIVE GRAPH WORKSPACE */}
       <div className="hud-panel hud-corner-brackets" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Floating Command Bar */}
         <div
-          data-tour="graph-controls"
           style={{
             padding: '10px 18px',
             background: 'linear-gradient(180deg, rgba(21, 27, 39, 0.95) 0%, rgba(17, 23, 34, 0.98) 100%)',
@@ -528,7 +560,7 @@ export const AttackGraph: React.FC = () => {
         </div>
 
         {/* Canvas Visualizer with Deep Blueprint Grid */}
-        <div data-tour="graph-canvas" className="cyber-grid-canvas" style={{ height: '620px', position: 'relative' }}>
+        <div className="cyber-grid-canvas" style={{ height: '620px', position: 'relative' }}>
           {loading && (
             <div className="state-loading" style={{ height: '100%' }}>
               <div className="state-loading-spinner" />
@@ -641,7 +673,7 @@ export const AttackGraph: React.FC = () => {
           </div>
 
           {/* Sub-Panel 2: Discovered Temporal BFS Paths */}
-          <div data-tour="bfs-paths" className="hud-panel" style={{ padding: '16px 20px' }}>
+          <div className="hud-panel" style={{ padding: '16px 20px' }}>
             <div className="card-header">
               <span className="card-title">
                 <Clock size={13} color="var(--steel-blue)" />
@@ -653,7 +685,7 @@ export const AttackGraph: React.FC = () => {
             </div>
 
             {bfsResults ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
                 {bfsResults.paths.map((p, idx) => {
                   const isActive = activePathIdx === idx;
                   return (
@@ -670,19 +702,23 @@ export const AttackGraph: React.FC = () => {
                       }}
                       title="Click to highlight this exact flow path on the canvas"
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span className="font-mono" style={{ fontSize: '11px', fontWeight: 600, color: isActive ? 'var(--accent-gold)' : 'var(--steel-blue)' }}>
-                          Route #{idx + 1} ({p.accounts_in_path.length - 1} hops) {isActive && '★ ILLUMINATED'}
-                        </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="font-mono" style={{ fontSize: '11px', fontWeight: 600, color: isActive ? 'var(--accent-gold)' : 'var(--steel-blue)' }}>
+                            Route #{idx + 1} ({p.hops.length} hops) {isActive && '★ ILLUMINATED'}
+                          </span>
+                          {renderStopReasonBadge(p.stop_reason)}
+                        </div>
                         <span className="font-mono tabular-nums" style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>
                           ₹{p.total_amount.toLocaleString()}
                         </span>
                       </div>
-                      <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-primary)' }}>
+                      <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
                         {p.accounts_in_path.join(' → ')}
                       </div>
-                      <div className="text-muted" style={{ fontSize: '10px', marginTop: '3px' }}>
-                        Traversal window: {p.duration_seconds.toFixed(0)}s | {p.hops.length} hops
+                      <div className="text-muted" style={{ fontSize: '10px', marginTop: '3px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Traversal: {p.duration_seconds.toFixed(0)}s | {p.direction?.toUpperCase() || 'TRACE'}</span>
+                        <span style={{ color: 'var(--steel-blue)' }}>Click to highlight on canvas</span>
                       </div>
                     </div>
                   );
@@ -691,7 +727,7 @@ export const AttackGraph: React.FC = () => {
             ) : (
               <div className="state-empty" style={{ padding: '24px 10px' }}>
                 <p style={{ fontSize: '11px' }}>
-                  Click "Trace Monotonic BFS" above to illuminate time-constrained money laundering dispersal trees.
+                  Click "Run BFS Trace" above to illuminate time-constrained money laundering dispersal trees.
                 </p>
               </div>
             )}

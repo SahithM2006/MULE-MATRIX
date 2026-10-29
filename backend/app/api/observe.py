@@ -29,7 +29,7 @@ def get_sentinel_summary():
         flagged_tx_count = cursor.fetchone()[0]
 
         # 4. Suspicious networks count (distinct scenarios or clusters)
-        cursor.execute("SELECT COUNT(DISTINCT scenario_id) FROM transactions WHERE scenario_id LIKE '%mule%' OR scenario_id LIKE '%smurf%' OR scenario_id LIKE '%passthrough%';")
+        cursor.execute("SELECT COUNT(DISTINCT scenario_id) FROM transactions WHERE scenario_id LIKE '%mule%' OR scenario_id LIKE '%smurf%' OR scenario_id LIKE '%passthrough%' OR scenario_id LIKE '%layer%' OR scenario_id LIKE '%ring%' OR scenario_id LIKE '%sim%';")
         network_count = cursor.fetchone()[0] or 6
 
         # 5. Recent Alerts
@@ -88,13 +88,15 @@ def get_threat_stream(
             SELECT t.*, 
                    sa.account_type as src_type, 
                    da.account_type as dst_type,
-                   al.risk_score as alert_risk,
-                   al.severity as alert_sev,
-                   al.primary_reason as alert_reason
+                   COALESCE(altx.risk_score, al_src.risk_score, al_dst.risk_score) as alert_risk,
+                   COALESCE(altx.severity, al_src.severity, al_dst.severity) as alert_sev,
+                   COALESCE(altx.primary_reason, al_src.primary_reason, al_dst.primary_reason) as alert_reason
             FROM transactions t
             LEFT JOIN accounts sa ON t.source_account_id = sa.account_id
             LEFT JOIN accounts da ON t.destination_account_id = da.account_id
-            LEFT JOIN alerts al ON t.transaction_id = al.transaction_id
+            LEFT JOIN (SELECT transaction_id, MAX(risk_score) as risk_score, severity, primary_reason FROM alerts WHERE transaction_id IS NOT NULL GROUP BY transaction_id) altx ON t.transaction_id = altx.transaction_id
+            LEFT JOIN (SELECT account_id, MAX(risk_score) as risk_score, severity, primary_reason FROM alerts GROUP BY account_id) al_src ON t.source_account_id = al_src.account_id
+            LEFT JOIN (SELECT account_id, MAX(risk_score) as risk_score, severity, primary_reason FROM alerts GROUP BY account_id) al_dst ON t.destination_account_id = al_dst.account_id
             WHERE 1=1
         """
         params = []

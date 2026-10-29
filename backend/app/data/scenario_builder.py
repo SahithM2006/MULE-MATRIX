@@ -344,11 +344,19 @@ def build_and_execute_scenario(scenario_type: str, seed: int = 101) -> Dict[str,
     finally:
         conn.close()
 
+    tok_id = lineage_events[0]["token_id"] if lineage_events else None
+    primary_acc = accounts[1]["account_id"] if len(accounts) > 1 else (accounts[0]["account_id"] if accounts else None)
+    primary_tx = transactions[0]["transaction_id"] if transactions else None
+
     return {
         "status": "SUCCESS",
         "scenario_type": scenario_type,
+        "scenario_id": f"sim_{scenario_type}_{seed}",
         "seed": seed,
         "accounts_generated": [a["account_id"] for a in accounts],
+        "primary_account_id": primary_acc,
+        "primary_transaction_id": primary_tx,
+        "token_id": tok_id,
         "transactions_count": len(transactions),
         "lineage_events_count": len(lineage_events),
         "alerts_triggered": alerts_found,

@@ -95,7 +95,7 @@ export const InvestigationReplay: React.FC = () => {
         </div>
 
         <div className="stream-controls">
-          <div data-tour="replay-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <button
               className="btn-secondary"
               onClick={handleReset}
@@ -194,7 +194,7 @@ export const InvestigationReplay: React.FC = () => {
           {currentStep && (
             <div className="replay-main-grid stagger-in">
               {/* Left Column: Active Step Details */}
-              <div className="hud-panel replay-card-active active-sweep-border" data-tour="utilities-overview" style={{ padding: '20px 24px' }}>
+              <div className="hud-panel replay-card-active active-sweep-border" style={{ padding: '20px 24px' }}>
                 <div className="card-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <span className="badge badge-gold" style={{ fontSize: '0.9rem', padding: '0.35rem 0.65rem' }}>

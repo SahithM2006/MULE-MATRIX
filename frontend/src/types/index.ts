@@ -151,7 +151,7 @@ export interface BFSRequest {
   seed_account_id: string;
   max_hops: number;
   time_window_seconds: number;
-  direction: "forward" | "backward";
+  direction: "forward" | "backward" | "combined";
   min_amount?: number;
   start_timestamp?: string;
 }
@@ -173,6 +173,8 @@ export interface DiscoveredPath {
   end_timestamp: string;
   duration_seconds: number;
   accounts_in_path: string[];
+  stop_reason?: string;
+  direction?: string;
 }
 
 export interface BFSResponse {
@@ -181,6 +183,7 @@ export interface BFSResponse {
   paths: DiscoveredPath[];
   visited_nodes: string[];
   execution_time_ms: number;
+  stop_reasons_summary?: Record<string, number>;
 }
 
 export interface GraphNode {

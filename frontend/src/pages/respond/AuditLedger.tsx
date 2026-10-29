@@ -3,6 +3,7 @@ import { ShieldCheck, CheckCircle2, RefreshCw, Search, Lock, AlertTriangle, Chev
 import { api } from '../../api/client';
 import { AuditEvent } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const AuditLedger: React.FC = () => {
   const { selectedCaseId, evidence } = useInvestigation();
@@ -109,6 +110,9 @@ export const AuditLedger: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {/* KPI Cards */}
       <div className="vault-kpi-grid">
         <div className="hud-panel clickable-card" style={{ padding: '14px 18px' }}>
@@ -139,7 +143,7 @@ export const AuditLedger: React.FC = () => {
       </div>
 
       {/* Audit Log Table */}
-      <div className="hud-panel" data-tour="audit-ledger-table" style={{ padding: '16px 20px' }}>
+      <div className="hud-panel" style={{ padding: '16px 20px' }}>
         <div className="card-header">
           <span className="card-title">FORENSIC TRANSACTION & EVENT CHRONICLE</span>
           <span className="table-count font-mono">{filteredEvents.length} events displayed</span>
@@ -211,7 +215,7 @@ export const AuditLedger: React.FC = () => {
                           </button>
                         </div>
                       </td>
-                      <td className="font-mono" data-tour="hash-chain" style={{ fontSize: '0.75rem', color: '#10B981' }} title={ev.integrity_hash}>
+                      <td className="font-mono" style={{ fontSize: '0.75rem', color: '#10B981' }} title={ev.integrity_hash}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <Lock size={10} />
                           <span>{ev.integrity_hash.substring(0, 8)}...</span>

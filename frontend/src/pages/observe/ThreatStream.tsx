@@ -20,6 +20,7 @@ import {
 import { api } from '../../api/client';
 import { TransactionEnriched } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const ThreatStream: React.FC = () => {
   const {
@@ -32,7 +33,9 @@ export const ThreatStream: React.FC = () => {
     setSelectedTokenId,
     navigateToModule,
     goToGuidedStage,
-    setMilestoneCompleted
+    setMilestoneCompleted,
+    setInvestigationTarget,
+    traceAccountInGraph
   } = useInvestigation();
 
   const [transactions, setTransactions] = useState<TransactionEnriched[]>([]);
@@ -112,11 +115,16 @@ export const ThreatStream: React.FC = () => {
   };
 
   const handleSelectRow = (tx: TransactionEnriched) => {
-    setSelectedTxId(tx.transaction_id);
-    setSelectedAccountId(tx.source_account_id);
-    if (tx.token_lineage_id) {
-      setSelectedTokenId(tx.token_lineage_id);
-    }
+    setInvestigationTarget({
+      accountId: tx.source_account_id,
+      txId: tx.transaction_id,
+      tokenId: tx.token_lineage_id || null,
+      scenarioId: tx.scenario_id || null
+    });
+    setMilestoneCompleted('alertSelected', {
+      riskScore: tx.risk_score || undefined,
+      alertReason: tx.signals.join(', ') || undefined
+    });
     setInspectedTx(tx);
   };
 
@@ -162,6 +170,9 @@ export const ThreatStream: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
+
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
 
       {/* Summary KPI Ribbon */}
       <div
@@ -432,7 +443,7 @@ export const ThreatStream: React.FC = () => {
       </div>
 
       {/* Main Streaming Table */}
-      <div data-tour="threat-stream-table" className="hud-panel" style={{ padding: '16px 20px' }}>
+      <div className="hud-panel" style={{ padding: '16px 20px' }}>
         <div className="card-header" style={{ marginBottom: '12px' }}>
           <span className="card-title" style={{ fontSize: '13.5px', fontWeight: 700 }}>
             <Activity size={14} color="var(--steel-blue)" />
@@ -478,7 +489,6 @@ export const ThreatStream: React.FC = () => {
                   return (
                     <tr
                       key={tx.transaction_id}
-                      data-tour={idx === 0 ? 'threat-stream-first-row' : undefined}
                       className={`stagger-in ${staggerClass}`}
                       onClick={() => handleSelectRow(tx)}
                       style={{
@@ -565,9 +575,9 @@ export const ThreatStream: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectRow(tx);
-                              goToGuidedStage(2);
+                              traceAccountInGraph(tx.source_account_id, tx.transaction_id);
                             }}
-                            title="Open Source Account & Tx in Attack Graph"
+                            title="Trace Source Account & Tx in Attack Graph"
                           >
                             <Network size={10} />
                             <span>Graph →</span>

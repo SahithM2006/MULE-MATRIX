@@ -150,12 +150,22 @@ def get_token_lineage(token_or_tx_id: str):
         )
         rows = cursor.fetchall()
         if not rows:
-            # Fallback query if search was transaction_id
+            # Check if search was a transaction_id
             cursor.execute("SELECT token_lineage_id FROM transactions WHERE transaction_id = ?;", (token_or_tx_id,))
             tok = cursor.fetchone()
             if tok and tok[0]:
                 cursor.execute("SELECT * FROM lineage_events WHERE token_id = ? ORDER BY sequence_index ASC;", (tok[0],))
                 rows = cursor.fetchall()
+            else:
+                # Check if search was an account_id with an associated token transaction
+                cursor.execute(
+                    "SELECT token_lineage_id FROM transactions WHERE (source_account_id = ? OR destination_account_id = ?) AND token_lineage_id IS NOT NULL LIMIT 1;",
+                    (token_or_tx_id, token_or_tx_id)
+                )
+                tok_acc = cursor.fetchone()
+                if tok_acc and tok_acc[0]:
+                    cursor.execute("SELECT * FROM lineage_events WHERE token_id = ? ORDER BY sequence_index ASC;", (tok_acc[0],))
+                    rows = cursor.fetchall()
 
         events = []
         for r in rows:
@@ -206,9 +216,24 @@ def run_lineage_tamper_test(payload: Dict[str, Any] = Body(...)):
         cursor.execute("SELECT * FROM lineage_events WHERE token_id = ? ORDER BY sequence_index ASC;", (token_id,))
         events = [dict(r) for r in cursor.fetchall()]
         if not events:
-            # Fallback to hero events
-            cursor.execute("SELECT * FROM lineage_events WHERE token_id LIKE '%HERO%' ORDER BY sequence_index ASC;")
-            events = [dict(r) for r in cursor.fetchall()]
+            # Check if token_id was an account_id
+            cursor.execute(
+                "SELECT token_lineage_id FROM transactions WHERE (source_account_id = ? OR destination_account_id = ?) AND token_lineage_id IS NOT NULL LIMIT 1;",
+                (token_id, token_id)
+            )
+            tok_acc = cursor.fetchone()
+            if tok_acc and tok_acc[0]:
+                cursor.execute("SELECT * FROM lineage_events WHERE token_id = ? ORDER BY sequence_index ASC;", (tok_acc[0],))
+                events = [dict(r) for r in cursor.fetchall()]
+
+        if not events:
+            return TamperTestResponse(
+                detected=False,
+                broken_index=-1,
+                tamper_description=f"No cryptographic token lineage records exist for identifier '{token_id}'. Tamper simulation requires an active token chain.",
+                original_hash="",
+                computed_tamper_hash=""
+            )
 
         return run_tamper_test(events, target_event_index=target_idx)
     finally:

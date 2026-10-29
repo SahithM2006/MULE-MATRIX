@@ -49,7 +49,9 @@ class IsolationForestEngine:
         # Baseline reference profile for explainability
         self.population_medians = np.median(X, axis=0)
         q75, q25 = np.percentile(X, [75, 25], axis=0)
-        self.population_iqrs = np.maximum(q75 - q25, 1e-4)
+        stds = np.std(X, axis=0)
+        # Robust scale denominator: use IQR or standard deviation, with minimum scale to prevent artificial spikes
+        self.population_iqrs = np.maximum(np.maximum(q75 - q25, stds), 0.05)
 
         # Calibration of min/max score bounds
         raw_scores = -self.model.decision_function(X)
@@ -87,7 +89,7 @@ class IsolationForestEngine:
             feat_name = self.feature_names[idx]
             val = float(X[0][idx])
             med = float(self.population_medians[idx])
-            dev_score = round(float(deviations[idx]), 2)
+            dev_score = round(float(np.clip(deviations[idx], 0.0, 50.0)), 2)
             top_features.append(TopFeaturePerturbation(
                 feature_name=feat_name,
                 account_value=round(val, 2),

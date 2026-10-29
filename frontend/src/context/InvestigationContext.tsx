@@ -125,6 +125,8 @@ interface InvestigationContextType {
   selectedTxId: string | null;
   selectedTokenId: string | null;
   selectedCaseId: string | null;
+  selectedScenarioId: string | null;
+  scenarioSeed: number | null;
   isGuidedMode: boolean;
   guidedStageIndex: number; // 1 to 6
   milestones: InvestigationMilestones;
@@ -147,8 +149,18 @@ interface InvestigationContextType {
   setSelectedTxId: (id: string | null) => void;
   setSelectedTokenId: (id: string | null) => void;
   setSelectedCaseId: (id: string | null) => void;
+  setSelectedScenarioId: (id: string | null) => void;
+  setScenarioSeed: (seed: number | null) => void;
   navigateToModule: (stage: ThreatStage, module: ThreatModule) => void;
   investigateAccount: (accountId: string) => void;
+  traceAccountInGraph: (accountId: string, txId?: string | null) => void;
+  setInvestigationTarget: (params: {
+    accountId: string;
+    txId?: string | null;
+    tokenId?: string | null;
+    alertId?: string | null;
+    scenarioId?: string | null;
+  }) => void;
   traceToken: (tokenId: string) => void;
   openCase: (caseId: string) => void;
 
@@ -204,6 +216,8 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
   const [selectedTxId, setSelectedTxId] = useState<string | null>('TX_HERO_005');
   const [selectedTokenId, setSelectedTokenId] = useState<string | null>('TOKR_HERO_500K_GENESIS');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  const [scenarioSeed, setScenarioSeed] = useState<number | null>(null);
 
   // Guided workflow stepper mode (collapsed by default to eliminate clutter)
   const [isGuidedMode, setIsGuidedMode] = useState<boolean>(false);
@@ -212,7 +226,7 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
   const [evidence, setEvidence] = useState<InvestigationEvidence>({});
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState<boolean>(false);
 
-  // Guided Product Tour State
+  // Tour disabled per product requirement: no forced modal, no tour coach marks
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(false);
   const [isTourActive, setIsTourActive] = useState<boolean>(false);
   const [currentTourStep, setCurrentTourStep] = useState<number>(1);
@@ -226,24 +240,19 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
     scenarioType?: string;
   } | null>(null);
 
-  // Initialize from localStorage on mount: check first-time visit
+  // Initialize from localStorage on mount (no tour popups)
   useEffect(() => {
     try {
-      // Check if user has already visited/seen the tour
-      const tourSeen = localStorage.getItem(TOUR_SEEN_KEY);
-      if (!tourSeen) {
-        // First-time visit! Show welcome modal
-        setIsWelcomeModalOpen(true);
-      }
-
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.selectedAccountId) setSelectedAccountId(parsed.selectedAccountId);
         if (parsed.selectedTxId) setSelectedTxId(parsed.selectedTxId);
-        if (parsed.selectedTokenId) setSelectedTokenId(parsed.selectedTokenId);
+        if (parsed.selectedTokenId !== undefined) setSelectedTokenId(parsed.selectedTokenId);
         if (parsed.selectedCaseId) setSelectedCaseId(parsed.selectedCaseId);
         if (parsed.selectedAlertId) setSelectedAlertId(parsed.selectedAlertId);
+        if (parsed.selectedScenarioId) setSelectedScenarioId(parsed.selectedScenarioId);
+        if (parsed.scenarioSeed) setScenarioSeed(parsed.scenarioSeed);
         if (typeof parsed.guidedStageIndex === 'number') setGuidedStageIndex(parsed.guidedStageIndex);
         if (typeof parsed.isGuidedMode === 'boolean') setIsGuidedMode(parsed.isGuidedMode);
         if (parsed.milestones) setMilestones(parsed.milestones);
@@ -265,6 +274,8 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
         selectedTokenId,
         selectedCaseId,
         selectedAlertId,
+        selectedScenarioId,
+        scenarioSeed,
         guidedStageIndex,
         isGuidedMode,
         milestones,
@@ -282,6 +293,8 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
     selectedTokenId,
     selectedCaseId,
     selectedAlertId,
+    selectedScenarioId,
+    scenarioSeed,
     guidedStageIndex,
     isGuidedMode,
     milestones,
@@ -297,11 +310,41 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const investigateAccount = (accountId: string) => {
     setSelectedAccountId(accountId);
+    if (!accountId.includes('HERO') && selectedTokenId && selectedTokenId.includes('HERO')) {
+      setSelectedTokenId(null);
+    }
     setActiveStage('DETECT');
     setActiveModule('detection-lab');
     if (isGuidedMode && guidedStageIndex < 4) {
       setGuidedStageIndex(4);
     }
+  };
+
+  const traceAccountInGraph = (accountId: string, txId?: string | null) => {
+    setSelectedAccountId(accountId);
+    if (txId) setSelectedTxId(txId);
+    if (!accountId.includes('HERO') && selectedTokenId && selectedTokenId.includes('HERO')) {
+      setSelectedTokenId(null);
+    }
+    setActiveStage('TRACE');
+    setActiveModule('attack-graph');
+    if (isGuidedMode && guidedStageIndex < 2) {
+      setGuidedStageIndex(2);
+    }
+  };
+
+  const setInvestigationTarget = (params: {
+    accountId: string;
+    txId?: string | null;
+    tokenId?: string | null;
+    alertId?: string | null;
+    scenarioId?: string | null;
+  }) => {
+    setSelectedAccountId(params.accountId);
+    if (params.txId !== undefined) setSelectedTxId(params.txId);
+    if (params.tokenId !== undefined) setSelectedTokenId(params.tokenId);
+    if (params.alertId !== undefined) setSelectedAlertId(params.alertId);
+    if (params.scenarioId !== undefined) setSelectedScenarioId(params.scenarioId);
   };
 
   const traceToken = (tokenId: string) => {
@@ -541,6 +584,8 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
         selectedTxId,
         selectedTokenId,
         selectedCaseId,
+        selectedScenarioId,
+        scenarioSeed,
         isGuidedMode,
         guidedStageIndex,
         milestones,
@@ -560,8 +605,12 @@ export const InvestigationProvider: React.FC<{ children: ReactNode }> = ({ child
         setSelectedTxId,
         setSelectedTokenId,
         setSelectedCaseId,
+        setSelectedScenarioId,
+        setScenarioSeed,
         navigateToModule,
         investigateAccount,
+        traceAccountInGraph,
+        setInvestigationTarget,
         traceToken,
         openCase,
         startGuidedInvestigation,

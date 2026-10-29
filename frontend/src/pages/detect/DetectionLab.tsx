@@ -19,6 +19,7 @@ import {
 import { api } from '../../api/client';
 import { AccountDossier, AlertSignal } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const DetectionLab: React.FC = () => {
   const {
@@ -29,7 +30,6 @@ export const DetectionLab: React.FC = () => {
     openCase,
     setSelectedCaseId,
     navigateToModule,
-    goToGuidedStage,
     setMilestoneCompleted
   } = useInvestigation();
   const [accountId, setAccountId] = useState(selectedAccountId || 'ACC_HERO_MULE_L2_CONVERGE');
@@ -87,7 +87,6 @@ export const DetectionLab: React.FC = () => {
         riskScore: dossier.aggregate_risk_score
       });
       openCase(newCase.case_id);
-      goToGuidedStage(5);
     } catch (err: any) {
       alert(`Case creation failed: ${err.message}`);
     } finally {
@@ -168,12 +167,14 @@ export const DetectionLab: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {dossier && !loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Executive Unified Risk Dossier HUD */}
           <div
             className="hud-panel"
-            data-tour="detection-dossier"
             style={{
               borderLeft: `4px solid ${gaugeColor}`,
               padding: '20px 24px'
@@ -301,7 +302,7 @@ export const DetectionLab: React.FC = () => {
                 className="btn-secondary"
                 onClick={() => {
                   setSelectedAccountId(dossier.account.account_id);
-                  goToGuidedStage(2);
+                  navigateToModule('TRACE', 'attack-graph');
                 }}
               >
                 <Network size={13} />
@@ -311,9 +312,11 @@ export const DetectionLab: React.FC = () => {
               <button
                 className="btn-action"
                 onClick={() => {
-                  const tok = selectedTokenId || 'TOKR_HERO_500K_GENESIS';
-                  traceToken(tok);
-                  goToGuidedStage(3);
+                  if (selectedTokenId) {
+                    traceToken(selectedTokenId);
+                  } else {
+                    navigateToModule('TRACE', 'token-forensics');
+                  }
                 }}
               >
                 <Lock size={12} />
@@ -323,7 +326,7 @@ export const DetectionLab: React.FC = () => {
           </div>
 
           {/* Contributing Multi-Signal Breakdown Table */}
-          <div className="hud-panel" data-tour="algorithm-matrix" style={{ padding: '16px 20px' }}>
+          <div className="hud-panel" style={{ padding: '16px 20px' }}>
             <div className="card-header">
               <span className="card-title">
                 <BarChart3 size={13} color="var(--accent-gold)" />
@@ -381,7 +384,7 @@ export const DetectionLab: React.FC = () => {
           </div>
 
           {/* Deep Algorithm Technical Workspaces (2x2 Grid) */}
-          <div data-tour="evidence-engines" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {/* 1. Sliding Window Analyzer */}
             {(() => {
               const win10m = dossier.sliding_window_analysis?.['10_min'] || Object.values(dossier.sliding_window_analysis || {})[0];

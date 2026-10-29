@@ -19,6 +19,7 @@ import {
 import { api } from '../../api/client';
 import { Case, CaseCreate } from '../../types';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 export const IncidentResponse: React.FC = () => {
   const {
@@ -31,10 +32,7 @@ export const IncidentResponse: React.FC = () => {
     traceToken,
     navigateToModule,
     goToGuidedStage,
-    setMilestoneCompleted,
-    isTourActive,
-    currentTourStep,
-    setTourStepStatus
+    setMilestoneCompleted
   } = useInvestigation();
   const [cases, setCases] = useState<Case[]>([]);
   const [activeCase, setActiveCase] = useState<Case | null>(null);
@@ -86,10 +84,6 @@ export const IncidentResponse: React.FC = () => {
     e.preventDefault();
     if (!newTitle.trim() || !newSuspect.trim()) return;
 
-    if (isTourActive && currentTourStep === 7) {
-      setTourStepStatus('action_in_progress');
-    }
-
     try {
       const created = await api.createCase({
         title: newTitle.trim(),
@@ -104,13 +98,7 @@ export const IncidentResponse: React.FC = () => {
       setShowCreateModal(false);
       setNewTitle('');
       setNewNote('');
-      if (isTourActive && currentTourStep === 7) {
-        setTourStepStatus('action_completed');
-      }
     } catch (err: any) {
-      if (isTourActive && currentTourStep === 7) {
-        setTourStepStatus('error', err.message);
-      }
       alert(`Failed to create case: ${err.message}`);
     }
   };
@@ -195,7 +183,7 @@ export const IncidentResponse: React.FC = () => {
         </div>
 
         <div className="stream-controls">
-          <button className="btn-primary" onClick={() => setShowCreateModal(true)} data-tour="initiate-case-btn">
+          <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
             <Plus size={13} />
             <span>Initiate New Case</span>
           </button>
@@ -209,10 +197,13 @@ export const IncidentResponse: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {/* Main Two-Column Case Management Layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '16px', alignItems: 'start' }}>
         {/* Left Column: Case Portfolio List */}
-        <div className="hud-panel" data-tour="case-portfolio" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="hud-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div className="card-header" style={{ marginBottom: '4px' }}>
             <span className="card-title">
               <Flag size={13} color="var(--accent-gold)" />
@@ -272,7 +263,7 @@ export const IncidentResponse: React.FC = () => {
 
         {/* Right Column: Active Case Dossier & Collaboration Timeline */}
         {activeCase ? (
-          <div className="hud-panel" data-tour="case-dossier" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div className="hud-panel" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Dossier Header & Lifecycle Stepper */}
             <div style={{ borderBottom: '1px solid rgba(117, 150, 200, 0.16)', paddingBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '14px' }}>
@@ -588,7 +579,7 @@ export const IncidentResponse: React.FC = () => {
               </div>
 
               <div className="modal-footer">
-                <button type="submit" className="btn-primary" data-tour="create-case-submit-btn">
+                <button type="submit" className="btn-primary">
                   Create Case Dossier
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>

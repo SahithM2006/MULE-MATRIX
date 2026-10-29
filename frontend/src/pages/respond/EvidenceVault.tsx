@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Download, Search, FileText, Link as LinkIcon, Lock, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
+import { ShieldCheck, Download, Search, FileText, Link as LinkIcon, Lock, CheckCircle2, AlertTriangle, Eye, Info } from 'lucide-react';
 import { api } from '../../api/client';
 import { useInvestigation } from '../../context/InvestigationContext';
+import { ContextualGuidancePanel } from '../../components/ContextualGuidancePanel';
 
 interface EvidenceItem {
   evidence_type: 'LINEAGE_CHAIN' | 'CASE_DOSSIER';
@@ -18,10 +19,7 @@ export const EvidenceVault: React.FC = () => {
     traceToken,
     openCase,
     navigateToModule,
-    setMilestoneCompleted,
-    isTourActive,
-    currentTourStep,
-    setTourStepStatus
+    setMilestoneCompleted
   } = useInvestigation();
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -59,22 +57,13 @@ export const EvidenceVault: React.FC = () => {
     try {
       setExportLoading(true);
       setExportError(null);
-      if (isTourActive && currentTourStep === 8) {
-        setTourStepStatus('action_in_progress');
-      }
       const dossier = await api.exportCasePackage(caseId);
       setSelectedExport(dossier);
       setMilestoneCompleted('evidenceExported', {
         exportSealHash: dossier.integrity_seal_sha256,
         caseNumber: dossier.case_record?.case_number
       });
-      if (isTourActive && currentTourStep === 8) {
-        setTourStepStatus('action_completed');
-      }
     } catch (err: any) {
-      if (isTourActive && currentTourStep === 8) {
-        setTourStepStatus('error', err.message);
-      }
       setExportError(err.message || 'Failed to export case dossier.');
     } finally {
       setExportLoading(false);
@@ -85,21 +74,12 @@ export const EvidenceVault: React.FC = () => {
     try {
       setExportLoading(true);
       setExportError(null);
-      if (isTourActive && currentTourStep === 8) {
-        setTourStepStatus('action_in_progress');
-      }
       const dossier = await api.exportLineagePackage(tokenId);
       setSelectedExport(dossier);
       setMilestoneCompleted('evidenceExported', {
         exportSealHash: dossier.integrity_seal_sha256
       });
-      if (isTourActive && currentTourStep === 8) {
-        setTourStepStatus('action_completed');
-      }
     } catch (err: any) {
-      if (isTourActive && currentTourStep === 8) {
-        setTourStepStatus('error', err.message);
-      }
       setExportError(err.message || 'Failed to export token provenance chain.');
     } finally {
       setExportLoading(false);
@@ -186,6 +166,9 @@ export const EvidenceVault: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Contextual Investigation Guidance */}
+      <ContextualGuidancePanel />
+
       {/* Summary KPI Strip - Interactive Filters */}
       <div className="vault-kpi-grid">
         <div
@@ -230,7 +213,7 @@ export const EvidenceVault: React.FC = () => {
       </div>
 
       {/* Main Evidence Catalog Table */}
-      <div className="hud-panel" data-tour="evidence-catalog" style={{ padding: '16px 20px' }}>
+      <div className="hud-panel" style={{ padding: '16px 20px' }}>
         <div className="card-header">
           <span className="card-title">FORENSIC ARTIFACT REGISTRY</span>
           <span className="table-count">{filteredItems.length} records matching</span>
@@ -261,72 +244,70 @@ export const EvidenceVault: React.FC = () => {
                   const staggerClass = idx < 6 ? `stagger-${idx + 1}` : '';
                   return (
                     <tr key={`${item.reference_id}-${idx}`} className={`stagger-in ${staggerClass}`}>
-                    <td>
-                      <span className={`badge ${item.evidence_type === 'LINEAGE_CHAIN' ? 'badge-gold' : 'badge-low'}`}>
-                        {item.evidence_type === 'LINEAGE_CHAIN' ? 'TOKEN CHAIN' : 'CASE DOSSIER'}
-                      </span>
-                    </td>
-                    <td className="font-mono" style={{ fontWeight: 600 }}>
-                      {item.reference_id}
-                    </td>
-                    <td style={{ maxWidth: '340px' }}>{item.description}</td>
-                    <td className="font-mono text-muted" style={{ fontSize: '0.8rem' }}>
-                      {item.timestamp_range}
-                    </td>
-                    <td>
-                      <span className="badge badge-low" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <CheckCircle2 size={12} color="#10B981" />
-                        {item.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {item.evidence_type === 'LINEAGE_CHAIN' ? (
-                          <>
-                            <button
-                              className="btn-action"
-                              onClick={() => traceToken(item.reference_id)}
-                              title="Inspect in Token Forensics"
-                            >
-                              <Eye size={12} />
-                              <span>Inspect</span>
-                            </button>
-                            <button
-                              className="btn-action btn-gold"
-                              data-tour="evidence-export-btn"
-                              onClick={() => handleExportLineage(item.reference_id)}
-                              title="Export Cryptographic Lineage Package"
-                            >
-                              <Download size={12} />
-                              <span>Export</span>
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              className="btn-action"
-                              onClick={() => openCase(item.reference_id)}
-                              title="Open in Incident Response"
-                            >
-                              <FileText size={12} />
-                              <span>View Case</span>
-                            </button>
-                            <button
-                              className="btn-action btn-gold"
-                              data-tour="evidence-export-btn"
-                              onClick={() => handleExportCase(item.reference_id)}
-                              title="Export Cryptographic Package"
-                            >
-                              <Download size={12} />
-                              <span>Export</span>
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      <td>
+                        <span className={`badge ${item.evidence_type === 'LINEAGE_CHAIN' ? 'badge-gold' : 'badge-low'}`}>
+                          {item.evidence_type === 'LINEAGE_CHAIN' ? 'TOKEN CHAIN' : 'CASE DOSSIER'}
+                        </span>
+                      </td>
+                      <td className="font-mono" style={{ fontWeight: 600 }}>
+                        {item.reference_id}
+                      </td>
+                      <td style={{ maxWidth: '340px' }}>{item.description}</td>
+                      <td className="font-mono text-muted" style={{ fontSize: '0.8rem' }}>
+                        {item.timestamp_range}
+                      </td>
+                      <td>
+                        <span className="badge badge-low" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <CheckCircle2 size={12} color="#10B981" />
+                          {item.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {item.evidence_type === 'LINEAGE_CHAIN' ? (
+                            <>
+                              <button
+                                className="btn-action"
+                                onClick={() => traceToken(item.reference_id)}
+                                title="Inspect in Token Forensics"
+                              >
+                                <Eye size={12} />
+                                <span>Inspect</span>
+                              </button>
+                              <button
+                                className="btn-action btn-gold"
+                                onClick={() => handleExportLineage(item.reference_id)}
+                                title="Export Cryptographic Lineage Package"
+                              >
+                                <Download size={12} />
+                                <span>Export</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="btn-action"
+                                onClick={() => openCase(item.reference_id)}
+                                title="Open in Incident Response"
+                              >
+                                <FileText size={12} />
+                                <span>View Case</span>
+                              </button>
+                              <button
+                                className="btn-action btn-gold"
+                                onClick={() => handleExportCase(item.reference_id)}
+                                title="Export Cryptographic Package"
+                              >
+                                <Download size={12} />
+                                <span>Export</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -395,9 +376,22 @@ export const EvidenceVault: React.FC = () => {
                     </div>
                     <div className="detail-field">
                       <span className="detail-label">LINEAGE RECEIPTS</span>
-                      <span className="detail-value">{selectedExport.verified_lineage_events?.length || 0} events verified</span>
+                      <span className="detail-value">
+                        {selectedExport.verified_lineage_events?.length || 0} events verified
+                        {selectedExport.lineage_verification_status && (
+                          <span style={{ display: 'block', fontSize: '10px', color: selectedExport.lineage_verification_status === 'VERIFIED' ? '#10B981' : 'var(--accent-gold)' }}>
+                            Status: {selectedExport.lineage_verification_status}
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </>
+                )}
+                {selectedExport.lineage_explanation && (
+                  <div style={{ gridColumn: 'span 2', padding: '8px 12px', background: 'rgba(117, 150, 200, 0.08)', borderRadius: 'var(--radius-xs)', border: '1px solid rgba(117, 150, 200, 0.2)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--steel-blue)', fontWeight: 600 }}>Provenance Assessment: </span>
+                    {selectedExport.lineage_explanation}
+                  </div>
                 )}
               </div>
 

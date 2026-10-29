@@ -5,12 +5,12 @@ import { useInvestigation, ThreatStage, ThreatModule } from '../context/Investig
 export const ThreatLifecycleDeck: React.FC = () => {
   const { activeStage, activeModule, navigateToModule } = useInvestigation();
 
-  const stages: { stage: ThreatStage; step: string; label: string; icon: React.ReactNode; defaultModule: ThreatModule }[] = [
-    { stage: 'OBSERVE', step: '01', label: 'OBSERVE', icon: <Eye size={13} />, defaultModule: 'sentinel' },
-    { stage: 'TRACE', step: '02', label: 'TRACE', icon: <Network size={13} />, defaultModule: 'attack-graph' },
-    { stage: 'DETECT', step: '03', label: 'DETECT', icon: <Cpu size={13} />, defaultModule: 'detection-lab' },
-    { stage: 'RESPOND', step: '04', label: 'RESPOND', icon: <ShieldAlert size={13} />, defaultModule: 'incident-response' },
-    { stage: 'TOOLS', step: 'SYS', label: 'UTILITIES', icon: <Sliders size={13} />, defaultModule: 'simulator' }
+  const stages: { stage: ThreatStage; step: string; label: string; tooltip: string; icon: React.ReactNode; defaultModule: ThreatModule }[] = [
+    { stage: 'OBSERVE', step: '01', label: 'OBSERVE', tooltip: 'Stage 01: Identify suspicious activity, select alerts, and establish target', icon: <Eye size={13} />, defaultModule: 'sentinel' },
+    { stage: 'TRACE', step: '02', label: 'TRACE', tooltip: 'Stage 02: Reconstruct fund movements and verify token lineage integrity', icon: <Network size={13} />, defaultModule: 'attack-graph' },
+    { stage: 'DETECT', step: '03', label: 'DETECT', tooltip: 'Stage 03: Examine multi-engine algorithmic evidence and risk signals', icon: <Cpu size={13} />, defaultModule: 'detection-lab' },
+    { stage: 'RESPOND', step: '04', label: 'RESPOND', tooltip: 'Stage 04: Record incident cases, preserve evidence dossiers, and review audit ledger', icon: <ShieldAlert size={13} />, defaultModule: 'incident-response' },
+    { stage: 'TOOLS', step: 'SYS', label: 'UTILITIES', tooltip: 'Generate synthetic scenarios and inspect system health', icon: <Sliders size={13} />, defaultModule: 'simulator' }
   ];
 
   const stageModules: Record<ThreatStage, { id: ThreatModule; label: string; tag?: string }[]> = {
@@ -48,6 +48,7 @@ export const ThreatLifecycleDeck: React.FC = () => {
               <button
                 className={`stage-tab ${activeStage === s.stage ? 'active' : ''}`}
                 onClick={() => navigateToModule(s.stage, s.defaultModule)}
+                title={s.tooltip}
               >
                 <span
                   style={{

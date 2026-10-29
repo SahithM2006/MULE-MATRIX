@@ -131,6 +131,18 @@ def analyze_sliding_window(
                         matched_outflow_indices.add(o_idx)
                         break
 
+    # Also detect multi-inflow convergence funneling (fan-in aggregation pass-through)
+    if not rapid_passthrough and len(inflows) >= 1 and len(outflows) >= 1 and inflow_sum > 0:
+        agg_ratio = outflow_sum / inflow_sum
+        if config.rapid_passthrough_min_ratio <= agg_ratio <= config.rapid_passthrough_max_ratio:
+            earliest_in = min(t for t, _, _ in inflows)
+            latest_out = max(t for t, _, _ in outflows)
+            if latest_out >= earliest_in:
+                agg_delay = (latest_out - earliest_in).total_seconds()
+                if agg_delay <= config.rapid_passthrough_max_delay_sec:
+                    rapid_passthrough = True
+                    passthrough_delays.append(agg_delay)
+
     median_delay = float(np.median(passthrough_delays)) if passthrough_delays else None
     
     # Inflow/outflow ratio
