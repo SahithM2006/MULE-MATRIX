@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Sidebar.css';
 import {
   Eye,
   Activity,

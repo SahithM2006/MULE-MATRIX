@@ -1,7 +1,7 @@
 {
   "model_version": "graphsage_v1.0",
   "feature_schema_version": "v1.0",
-  "trained_at": "2026-10-29T06:20:50.965191+00:00",
+  "trained_at": "2026-10-29T07:48:24.988344+00:00",
   "validation_f1": 1.0,
   "architecture": "2-Layer Inductive GraphSAGE (Mean Aggregator, Hidden: 64, Out: 32)",
   "mean_features": [

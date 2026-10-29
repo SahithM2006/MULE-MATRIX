@@ -1,0 +1,366 @@
+/* ==========================================================================
+   MULE MATRIX — INTELLIGENCE SIDEBAR COMPONENT STYLES
+   Ensures dedicated, self-contained layout independent of cascade order
+   ========================================================================== */
+
+.intelligence-sidebar {
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  flex-shrink: 0;
+  background-color: #111722;
+  border-right: 1px solid #2A3444;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  z-index: 90;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              min-width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              max-width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+}
+
+.intelligence-sidebar.collapsed {
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+/* Strict button resets for sidebar interactions */
+.intelligence-sidebar button,
+.intelligence-sidebar .sidebar-nav-item,
+.intelligence-sidebar .sidebar-toggle-btn {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  user-select: none;
+}
+
+/* Sidebar Top Header */
+.intelligence-sidebar .sidebar-header {
+  height: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(42, 52, 68, 0.65);
+  background: rgba(8, 10, 15, 0.55);
+  box-sizing: border-box;
+}
+
+.intelligence-sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 0;
+}
+
+.intelligence-sidebar .sidebar-brand-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.intelligence-sidebar .sidebar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #C6A45A;
+  box-shadow: 0 0 8px #C6A45A;
+  flex-shrink: 0;
+}
+
+.intelligence-sidebar .sidebar-pipeline-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #9BA8BA;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+}
+
+.intelligence-sidebar .sidebar-toggle-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #2A3444;
+  border-radius: 3px;
+  color: #64748B;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.intelligence-sidebar .sidebar-toggle-btn:hover {
+  color: #C6A45A;
+  border-color: #C6A45A;
+  background: rgba(198, 164, 90, 0.12);
+}
+
+/* Nav Sections Container */
+.intelligence-sidebar .sidebar-nav-container {
+  flex: 1 1 auto;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.intelligence-sidebar .sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.intelligence-sidebar .sidebar-section-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  margin-bottom: 2px;
+  user-select: none;
+}
+
+.intelligence-sidebar .section-step-num {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #C6A45A;
+  background: rgba(198, 164, 90, 0.14);
+  border: 1px solid rgba(198, 164, 90, 0.35);
+  padding: 1px 4px;
+  border-radius: 2px;
+  line-height: 1.2;
+}
+
+.intelligence-sidebar .section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748B;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.intelligence-sidebar .sidebar-section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Individual Navigation Item */
+.intelligence-sidebar .sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #9BA8BA;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  text-align: left;
+  position: relative;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  text-decoration: none;
+}
+
+.intelligence-sidebar.collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.intelligence-sidebar .sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #E8EDF5;
+  border-color: rgba(117, 150, 200, 0.25);
+}
+
+.intelligence-sidebar .sidebar-nav-item.active {
+  background: rgba(198, 164, 90, 0.12);
+  color: #C6A45A;
+  border-color: rgba(198, 164, 90, 0.45);
+  font-weight: 600;
+}
+
+.intelligence-sidebar .nav-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: #7596C8;
+}
+
+.intelligence-sidebar .sidebar-nav-item.active .nav-item-icon {
+  color: #C6A45A;
+}
+
+.intelligence-sidebar .nav-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+}
+
+.intelligence-sidebar .nav-item-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+}
+
+.intelligence-sidebar .nav-item-badge {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(117, 150, 200, 0.12);
+  color: #7596C8;
+  border: 1px solid rgba(117, 150, 200, 0.25);
+  white-space: nowrap;
+}
+
+.intelligence-sidebar .nav-item-badge.active {
+  background: rgba(198, 164, 90, 0.2);
+  color: #C6A45A;
+  border-color: rgba(198, 164, 90, 0.5);
+}
+
+.intelligence-sidebar .active-indicator {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background-color: #C6A45A;
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 0 8px rgba(198, 164, 90, 0.6);
+}
+
+/* Sidebar Footer Box */
+.intelligence-sidebar .sidebar-footer {
+  padding: 12px 10px;
+  border-top: 1px solid rgba(42, 52, 68, 0.6);
+  background: rgba(8, 10, 15, 0.45);
+}
+
+.intelligence-sidebar .security-posture-box {
+  padding: 8px 10px;
+  border-radius: 3px;
+  background: #151B27;
+  border: 1px solid #2A3444;
+}
+
+.intelligence-sidebar .posture-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.intelligence-sidebar .posture-title {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #7596C8;
+  text-transform: uppercase;
+}
+
+.intelligence-sidebar .posture-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #E8EDF5;
+  font-weight: 600;
+}
+
+.intelligence-sidebar .meta-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #10B981;
+  box-shadow: 0 0 6px #10B981;
+}
+
+/* ==========================================================================
+   RESPONSIVE BEHAVIOUR
+   ========================================================================== */
+
+@media (max-width: 1280px) {
+  .intelligence-sidebar {
+    width: 230px;
+    min-width: 230px;
+    max-width: 230px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .intelligence-sidebar {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+  }
+  .intelligence-sidebar .sidebar-brand-summary,
+  .intelligence-sidebar .sidebar-section-header,
+  .intelligence-sidebar .nav-item-content,
+  .intelligence-sidebar .sidebar-footer {
+    display: none !important;
+  }
+  .intelligence-sidebar .sidebar-header {
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  .intelligence-sidebar .sidebar-nav-item {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .intelligence-sidebar {
+    position: relative;
+    top: 0;
+    height: auto;
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #2A3444;
+  }
+  .intelligence-sidebar .sidebar-nav-container {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 16px;
+    padding: 8px;
+  }
+  .intelligence-sidebar .sidebar-section-items {
+    flex-direction: row;
+  }
+}
+

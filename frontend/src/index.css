@@ -47,6 +47,17 @@
   padding: 0;
 }
 
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 body {
   background-color: var(--bg-obsidian);
   color: var(--text-primary);
